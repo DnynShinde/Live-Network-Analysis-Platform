@@ -1,5 +1,5 @@
 sdn_controller:
-  base_url: "http://localhost:8080"
+  base_url: "http://10.9.69.248:8080"
   endpoints:
     switches: "/v1.0/topology/switches"
     hosts: "/v1.0/topology/hosts"
@@ -15,6 +15,6 @@ kafka:
 
 neo4j:
   uri: "bolt://localhost:7687"
-  user: "******"
-  password: "********"
+  user: "neo4j"
+  password: "*******" # Updated password
   database: "neo4j"

@@ -1,0 +1,86 @@
+# NETWORK TOPOLOGY ONTOLOGY
+# This schema defines the complete network topology model for Software-Defined Networks
+
+# Node definitions
+nodes:
+  # Network switches that forward traffic in the SDN environment
+  Switch:
+    description: "A network switching device that forwards data between network segments"
+    primary_key: dpid  # Datapath ID uniquely identifies a switch in the network
+    required_properties:
+      - dpid  # Datapath Identifier (unique OpenFlow switch identifier)
+    optional_properties:
+      - name  # Human-readable name of the switch
+      - model  # Hardware model of the switch (e.g., "Cisco Nexus 9000")
+      - manufacturer  # Company that manufactured the switch (e.g., "Cisco", "Arista")
+      - software_version  # Version of the switch operating system
+      - uptime  # Duration the switch has been operational in seconds
+      - total_ports  # Total number of physical ports on the switch
+      - active_flows  # Number of active flows on the switch
+    labels: 
+      - NetworkSwitch
+      - NetworkDevice
+  
+  # End hosts connected to the network
+  Host:
+    description: "An end device connected to the network (server, computer, IoT device, etc.)"
+    primary_key: mac  # MAC address uniquely identifies a host
+    required_properties:
+      - mac  # Media Access Control address (unique hardware identifier)
+    optional_properties:
+      - ip  # IP address assigned to the host (IPv4 or IPv6)
+      - hostname  # DNS name of the host
+      - os  # Operating system running on the host
+      - last_seen  # Timestamp when the host was last detected on the network
+      - vlan  # Virtual LAN the host belongs to
+      - location  # Physical location of the host
+    labels:
+      - NetworkHost
+      - Endpoint
+
+# Relationship definitions
+relationships:
+  # Represents a host connected to a specific switch port
+  CONNECTED_TO:
+    description: "Indicates that a host is physically connected to a switch port"
+    source: Host
+    target: Switch
+    required_properties:
+      - port_no  # The switch port number the host is connected to
+    optional_properties:
+      - bandwidth  # Available bandwidth on this connection in Mbps
+      - status  # Connection status ("up", "down", "flapping")
+      - connection_time  # When the connection was established
+      - mac_learning_time  # When the MAC address was first learned on this port
+    semantics: "Host -[CONNECTED_TO]-> Switch means the host is physically attached to the switch"
+  
+  # Represents network links between switches
+  LINKS_TO:
+    description: "Represents a network link between two switches"
+    source: Switch
+    target: Switch
+    required_properties:
+      - src_port  # Source switch port number
+      - dst_port  # Destination switch port number
+    optional_properties:
+      - bandwidth  # Maximum bandwidth of the link in Mbps
+      - latency  # Network latency between switches in milliseconds
+      - status  # Link status ("up", "down", "degraded")
+      - link_type  # Type of link ("copper", "fiber", "wireless")
+      - distance  # Physical distance between switches in meters
+      - utilization  # Current utilization of the link as percentage
+    semantics: "Switch1 -[LINKS_TO]-> Switch2 means Switch1 has a direct network connection to Switch2"
+
+# Common queries examples (to help LLM understand the model)
+example_queries:
+  - question: "How many switches are in the network?"
+    cypher: "MATCH (s:Switch) RETURN COUNT(s) as switchCount"
+  
+  - question: "Find all hosts connected to switch with DPID '0000000000000001'"
+    cypher: "MATCH (h:Host)-[r:CONNECTED_TO]->(s:Switch {dpid: '0000000000000001'}) RETURN h.mac, h.ip, r.port_no"
+  
+  - question: "What is the network topology?"
+    cypher: "MATCH p=(s1:Switch)-[r:LINKS_TO]->(s2:Switch) RETURN s1.dpid, r.src_port, s2.dpid, r.dst_port"
+  
+  - question: "Find all isolated switches with no connections"
+    cypher: "MATCH (s:Switch) WHERE NOT (s)-[:LINKS_TO]-() AND NOT (s)<-[:CONNECTED_TO]-() RETURN s.dpid"

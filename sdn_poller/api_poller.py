@@ -24,41 +24,20 @@ def fetch_and_publish(endpoint, parser_func, topic):
     except Exception as e:
         print(f"Error fetching {url}: {e}")
 
+# Polling function to fetch data from SDN controller and publish to Kafka
 def run_poller():
     while True:
+        # Fetch and publish data for switches
         fetch_and_publish(config['sdn_controller']['endpoints']['switches'],
                           parse_switches, config['kafka']['topics']['switches'])
+        # Fetch and publish data for hosts and hosts
         fetch_and_publish(config['sdn_controller']['endpoints']['hosts'],
                           parse_hosts, config['kafka']['topics']['hosts'])
+        # Fetch and publish data for links
         fetch_and_publish(config['sdn_controller']['endpoints']['links'],
                           parse_links, config['kafka']['topics']['links'])
 
         time.sleep(config['sdn_controller']['poll_interval_seconds'])
-
-def handle_host(session, data):
-    print("DEBUG handle_host data:", data)
-    mac = data.get('mac')
-    ip = data.get('ip') or "unknown"
-    dpid = data.get('attached_switch')
-    session.run(
-        "MERGE (h:Host {mac: $mac, ip: $ip, attached_switch: $dpid})",
-        mac=mac, ip=ip, dpid=dpid
-    )
-
-def parse_hosts(response_json):
-    print("DEBUG: Hosts API response:", response_json)
-    if not isinstance(response_json, list):
-        return []
-    result = []
-    for host in response_json:
-        if isinstance(host, dict):
-            mac = host.get('mac')
-            ip = host.get('ipv4', [None])[0] if 'ipv4' in host and host['ipv4'] else None
-            attached_switch = host.get('attached_switch', host.get('port', {}).get('dpid'))
-            # Allow hosts even if ip is None
-            if mac and attached_switch:
-                result.append({'mac': mac, 'ip': ip, 'attached_switch': attached_switch})
-    return result
 
 if __name__ == "__main__":
     run_poller()
